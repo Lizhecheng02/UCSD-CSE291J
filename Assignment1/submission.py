@@ -3,8 +3,6 @@
 ############################################################################
 
 from sklearn import linear_model
-from lightgbm import LGBMClassifier
-from xgboost import XGBClassifier
 import random
 import numpy as np
 
@@ -18,15 +16,10 @@ random.seed(0)
 
 
 def p1model():
-    # return linear_model.LogisticRegression(C=1.0, class_weight="balanced")
-
-    return LGBMClassifier(
-        class_weight="balanced",
-        n_estimators=300,
-        learning_rate=0.05,
-        max_depth=5,
-        num_leaves=9,
-        random_state=3407
+    return linear_model.LogisticRegression(
+        C=2.0,
+        max_iter=2000,
+        class_weight="balanced"
     )
 
 
@@ -53,7 +46,8 @@ def p1feat(d, z):
         else:
             features.append(float(value))
 
-    features += [1 if int(z) == i else 0 for i in range(7)]
+    # features += [1 if int(z) == i else 0 for i in range(7)]
+    features += [1 if int(z) == 1 else 0]
     return features
 
 #########################################
@@ -75,10 +69,22 @@ def p2model():
 
 def p2data(data):
     newd = []
+    one_count = 0
+    others_count = 0
+    for _, z, _ in data:
+        one_count += 1 if z == 1 else 0
+        others_count += 1 if z != 1 else 0
+
+    min_value = min(one_count, others_count)
+    select_others_count = 0
     for d, z, l in data:
-        if not z:  # Repeat instances with z=0
+        if z == 1:
             newd.append((d, z, l))
-        newd.append((d, z, l))
+        elif z != 1 and select_others_count < min_value / 2.0:
+            select_others_count += 1
+            newd.append((d, z, l))
+        else:
+            continue
     return newd
 
 #########################################
@@ -89,7 +95,24 @@ def p2data(data):
 
 
 def p3feat(d):
-    return [float(v) for v in d.values()]
+    features = []
+    for key, value in d.items():
+        if key == "ID":
+            continue
+        elif "LIMIT" in key or "AMT" in key:
+            val = float(value)
+            if val < 0:
+                features.append(0)
+            else:
+                features.append(np.log10(val + 1))
+        elif "SEX" in key:
+            features.append(1 if int(value) == 2 else 0)
+        elif "MARRIAGE" in key:
+            features += [1 if int(value) == i else 0 for i in range(4)]
+        else:
+            features.append(float(value))
+
+    return features
 
 # data: the dataset, which is a list of tuples of the form (d,z,l)
 # d: feature dictionary (excluding sensitive attribute)
@@ -99,18 +122,18 @@ def p3feat(d):
 
 
 def p3model(data):
-    weights = []
-    for _, z, _ in data:
-        if z:
-            weights.append(2)
-        else:
-            weights.append(1)  # Assign higher instance weights to instances with z=0
     X_train = [p3feat(d) for d, _, _ in data]
     y_train = [l for _, _, l in data]
-    mod = p1model()
+    model = p1model()
+    model = linear_model.LogisticRegression(
+        C=1.0,
+        max_iter=2000,
+        class_weight={0: 1.0, 1: 3.0},
+    )
     # You can use any model you want, though it must have a "predict" function which takes a feature vector
-    mod.fit(X_train, y_train, sample_weight=weights)
-    return mod
+    model.fit(X_train, y_train)
+    return model
+
 
 ###########################################
 # Problem 4: Post-processing intervention #
@@ -124,9 +147,7 @@ def p3model(data):
 # return: list of predictions (list of bool)
 
 
-def p4labels(test_scores, dTest, zTest):
-    threshold0 = 0.5
-    threshold1 = 0.51
+def p4labels(test_scores, dTest, zTest, threshold0=0.520, threshold1=0.480):
     predictions = []
     for s, z in zip(test_scores, zTest):
         if not z:
@@ -153,10 +174,13 @@ def p4labels(test_scores, dTest, zTest):
 
 
 def p5(dataTrain, dTest, zTest):
+    # dataTrain = p2data(data=dataTrain)
     X_train = [p1feat(d, z) for d, z, _ in dataTrain]
     y_train = [l for _, _, l in dataTrain]
     X_test = [p1feat(d, z) for d, z in zip(dTest, zTest)]
-    mod = p1model()
-    mod.fit(X_train, y_train)
-    test_predictions = mod.predict(X_test)
+    model = p1model()
+    model.fit(X_train, y_train)
+    test_scores = [x[1] for x in model.predict_proba(X_test)]
+    # test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.470)
+    test_predictions = p4labels(test_scores, dTest, zTest)
     return test_predictions

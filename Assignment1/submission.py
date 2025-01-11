@@ -3,7 +3,10 @@
 ############################################################################
 
 from sklearn import linear_model
+from lightgbm import LGBMClassifier
+from xgboost import XGBClassifier
 import random
+import numpy as np
 
 random.seed(0)
 
@@ -15,7 +18,17 @@ random.seed(0)
 
 
 def p1model():
-    return linear_model.LogisticRegression(C=1.0, class_weight="balanced")
+    # return linear_model.LogisticRegression(C=1.0, class_weight="balanced")
+
+    return LGBMClassifier(
+        class_weight="balanced",
+        n_estimators=300,
+        learning_rate=0.05,
+        max_depth=5,
+        num_leaves=9,
+        random_state=3407
+    )
+
 
 # d: a dictionary describing a training instance (excluding the sensitive attribute)
 # z: sensitive attribute (True if married)
@@ -23,7 +36,25 @@ def p1model():
 
 
 def p1feat(d, z):
-    return [float(v) for v in d.values()] + [1.0 * z]
+    features = []
+    for key, value in d.items():
+        if key == "ID":
+            continue
+        elif "LIMIT" in key or "AMT" in key:
+            val = float(value)
+            if val < 0:
+                features.append(0)
+            else:
+                features.append(np.log10(val + 1))
+        elif "SEX" in key:
+            features.append(1 if int(value) == 2 else 0)
+        elif "MARRIAGE" in key:
+            features += [1 if int(value) == i else 0 for i in range(4)]
+        else:
+            features.append(float(value))
+
+    features += [1 if int(z) == i else 0 for i in range(7)]
+    return features
 
 #########################################
 # Part 2: Dataset-based intervention    #

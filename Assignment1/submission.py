@@ -125,11 +125,6 @@ def p3model(data):
     X_train = [p3feat(d) for d, _, _ in data]
     y_train = [l for _, _, l in data]
     model = p1model()
-    model = linear_model.LogisticRegression(
-        C=1.0,
-        max_iter=2000,
-        class_weight={0: 1.0, 1: 3.0},
-    )
     # You can use any model you want, though it must have a "predict" function which takes a feature vector
     model.fit(X_train, y_train)
     return model
@@ -174,13 +169,12 @@ def p4labels(test_scores, dTest, zTest, threshold0=0.520, threshold1=0.480):
 
 
 def p5(dataTrain, dTest, zTest):
-    # dataTrain = p2data(data=dataTrain)
+    dataTrain = p2data(data=dataTrain)
     X_train = [p1feat(d, z) for d, z, _ in dataTrain]
     y_train = [l for _, _, l in dataTrain]
     X_test = [p1feat(d, z) for d, z in zip(dTest, zTest)]
     model = p1model()
     model.fit(X_train, y_train)
     test_scores = [x[1] for x in model.predict_proba(X_test)]
-    # test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.470)
-    test_predictions = p4labels(test_scores, dTest, zTest)
+    test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.470)
     return test_predictions

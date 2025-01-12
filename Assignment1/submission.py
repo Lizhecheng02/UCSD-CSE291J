@@ -43,6 +43,9 @@ def p1feat(d, z):
             features.append(1 if int(value) == 2 else 0)
         elif "MARRIAGE" in key:
             features += [1 if int(value) == i else 0 for i in range(4)]
+        # elif "AGE" in key:
+        #     features += [1 if int(value) // 10 == i else 0 for i in range(8)]
+        #     features.append(int(value) // 10)
         else:
             features.append(float(value))
 

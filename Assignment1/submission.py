@@ -16,11 +16,27 @@ random.seed(0)
 
 
 def p1model():
-    return linear_model.LogisticRegression(
-        C=2.0,
-        max_iter=2000,
-        class_weight="balanced"
+    import subprocess
+    import sys
+    # subprocess.check_call([sys.executable, "-m", "pip", "install", "lightgbm"])
+    from lightgbm import LGBMClassifier
+
+    # For LGBMClassifier
+    return LGBMClassifier(
+        class_weight="balanced",
+        n_estimators=300,
+        learning_rate=0.05,
+        max_depth=5,
+        num_leaves=9,
+        random_state=3407
     )
+
+    # For LogisticRegression
+    # return linear_model.LogisticRegression(
+    #     C=2.0,
+    #     max_iter=2000,
+    #     class_weight="balanced"
+    # )
 
 
 # d: a dictionary describing a training instance (excluding the sensitive attribute)
@@ -125,9 +141,24 @@ def p3feat(d):
 
 
 def p3model(data):
+    import subprocess
+    import sys
+    # subprocess.check_call([sys.executable, "-m", "pip", "install", "lightgbm"])
+    from lightgbm import LGBMClassifier
+
     X_train = [p3feat(d) for d, _, _ in data]
     y_train = [l for _, _, l in data]
-    model = p1model()
+    # For LogisticRegression
+    # model = p1model()
+    # For LGBMClassifier
+    model = LGBMClassifier(
+        class_weight={0: 1.0, 1: 4.5},
+        n_estimators=300,
+        learning_rate=0.05,
+        max_depth=5,
+        num_leaves=8,
+        random_state=7
+    )
     # You can use any model you want, though it must have a "predict" function which takes a feature vector
     model.fit(X_train, y_train)
     return model
@@ -179,5 +210,8 @@ def p5(dataTrain, dTest, zTest):
     model = p1model()
     model.fit(X_train, y_train)
     test_scores = [x[1] for x in model.predict_proba(X_test)]
-    test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.470)
+    # For LogisticRegression
+    # test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.470)
+    # For LGBMClassifier
+    test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.480)
     return test_predictions

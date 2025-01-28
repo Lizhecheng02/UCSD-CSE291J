@@ -5,6 +5,10 @@
 from sklearn import linear_model
 import random
 import numpy as np
+import subprocess
+import sys
+# subprocess.check_call([sys.executable, "-m", "pip", "install", "lightgbm"])
+from lightgbm import LGBMClassifier
 
 random.seed(0)
 
@@ -16,27 +20,22 @@ random.seed(0)
 
 
 def p1model():
-    import subprocess
-    import sys
-    # subprocess.check_call([sys.executable, "-m", "pip", "install", "lightgbm"])
-    from lightgbm import LGBMClassifier
-
     # For LGBMClassifier
-    return LGBMClassifier(
-        class_weight="balanced",
-        n_estimators=300,
-        learning_rate=0.05,
-        max_depth=5,
-        num_leaves=9,
-        random_state=3407
-    )
+    # return LGBMClassifier(
+    #     class_weight="balanced",
+    #     n_estimators=200,
+    #     learning_rate=0.05,
+    #     max_depth=5,
+    #     num_leaves=9,
+    #     random_state=3407
+    # )
 
     # For LogisticRegression
-    # return linear_model.LogisticRegression(
-    #     C=2.0,
-    #     max_iter=2000,
-    #     class_weight="balanced"
-    # )
+    return linear_model.LogisticRegression(
+        C=5.0,
+        max_iter=2000,
+        class_weight="balanced"
+    )
 
 
 # d: a dictionary describing a training instance (excluding the sensitive attribute)
@@ -59,13 +58,13 @@ def p1feat(d, z):
             features.append(1 if int(value) == 2 else 0)
         elif "MARRIAGE" in key:
             features += [1 if int(value) == i else 0 for i in range(4)]
-        # elif "AGE" in key:
-        #     features += [1 if int(value) // 10 == i else 0 for i in range(8)]
-        #     features.append(int(value) // 10)
+        elif "PAY" in key and "AMT" not in key:
+            features += [1 if int(value) == i else 0 for i in range(-1, 10)]
+        elif "AGE" in key:
+            features += [1 if int(value) // 10 == i else 0 for i in range(2, 8)]
         else:
             features.append(float(value))
 
-    # features += [1 if int(z) == i else 0 for i in range(7)]
     features += [1 if int(z) == 1 else 0]
     return features
 
@@ -86,24 +85,31 @@ def p2model():
 # return: a dataset in the same form
 
 
-def p2data(data):
+def p2data(data, hp=0):
     newd = []
-    one_count = 0
-    others_count = 0
-    for _, z, _ in data:
-        one_count += 1 if z == 1 else 0
-        others_count += 1 if z != 1 else 0
+    one_data = []
+    others_data = []
 
-    min_value = min(one_count, others_count)
-    select_others_count = 0
     for d, z, l in data:
         if z == 1:
-            newd.append((d, z, l))
-        elif z != 1 and select_others_count < min_value / 2.0:
-            select_others_count += 1
-            newd.append((d, z, l))
+            one_data.append((d, z, l))
         else:
-            continue
+            others_data.append((d, z, l))
+
+    one_count = len(one_data)
+    others_count = len(others_data)
+
+    if one_count < others_count:
+        multiplier = others_count // one_count
+        remainder = others_count % one_count + hp
+        for _ in range(multiplier):
+            newd.extend(one_data)
+        newd.extend(one_data[:remainder])
+    else:
+        newd.extend(one_data)
+
+    newd.extend(others_data)
+
     return newd
 
 #########################################
@@ -128,6 +134,10 @@ def p3feat(d):
             features.append(1 if int(value) == 2 else 0)
         elif "MARRIAGE" in key:
             features += [1 if int(value) == i else 0 for i in range(4)]
+        elif "PAY" in key and "AMT" not in key:
+            features += [1 if int(value) == i else 0 for i in range(-1, 10)]
+        elif "AGE" in key:
+            features += [1 if int(value) // 10 == i else 0 for i in range(2, 8)]
         else:
             features.append(float(value))
 
@@ -141,26 +151,25 @@ def p3feat(d):
 
 
 def p3model(data):
-    import subprocess
-    import sys
-    # subprocess.check_call([sys.executable, "-m", "pip", "install", "lightgbm"])
-    from lightgbm import LGBMClassifier
-
     X_train = [p3feat(d) for d, _, _ in data]
     y_train = [l for _, _, l in data]
+
     # For LogisticRegression
     # model = p1model()
+
     # For LGBMClassifier
     model = LGBMClassifier(
         class_weight={0: 1.0, 1: 4.5},
-        n_estimators=300,
+        n_estimators=200,
         learning_rate=0.05,
         max_depth=5,
-        num_leaves=8,
+        num_leaves=9,
         random_state=7
     )
+
     # You can use any model you want, though it must have a "predict" function which takes a feature vector
     model.fit(X_train, y_train)
+
     return model
 
 
@@ -176,7 +185,7 @@ def p3model(data):
 # return: list of predictions (list of bool)
 
 
-def p4labels(test_scores, dTest, zTest, threshold0=0.520, threshold1=0.480):
+def p4labels(test_scores, dTest, zTest, threshold0=0.510, threshold1=0.490):
     predictions = []
     for s, z in zip(test_scores, zTest):
         if not z:
@@ -189,6 +198,7 @@ def p4labels(test_scores, dTest, zTest, threshold0=0.520, threshold1=0.480):
                 predictions.append(1)
             else:
                 predictions.append(0)
+
     return predictions
 
 ########################################################
@@ -203,15 +213,33 @@ def p4labels(test_scores, dTest, zTest, threshold0=0.520, threshold1=0.480):
 
 
 def p5(dataTrain, dTest, zTest):
-    dataTrain = p2data(data=dataTrain)
+    dataTrain = p2data(data=dataTrain, hp=-500)
+
     X_train = [p1feat(d, z) for d, z, _ in dataTrain]
     y_train = [l for _, _, l in dataTrain]
     X_test = [p1feat(d, z) for d, z in zip(dTest, zTest)]
-    model = p1model()
+
+    # For LogisticRegression
+    # model = p1model()
+
+    # For LGBMClassifier
+    model = LGBMClassifier(
+        class_weight="balanced",
+        n_estimators=200,
+        learning_rate=0.05,
+        max_depth=5,
+        num_leaves=9,
+        random_state=7
+    )
+
     model.fit(X_train, y_train)
+
     test_scores = [x[1] for x in model.predict_proba(X_test)]
+
     # For LogisticRegression
     # test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.470)
+
     # For LGBMClassifier
-    test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.480)
+    test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.510, threshold1=0.490)
+
     return test_predictions

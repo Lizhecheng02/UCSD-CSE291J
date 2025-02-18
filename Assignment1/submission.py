@@ -7,8 +7,8 @@ import random
 import numpy as np
 import subprocess
 import sys
-# subprocess.check_call([sys.executable, "-m", "pip", "install", "lightgbm"])
-# from lightgbm import LGBMClassifier
+subprocess.check_call([sys.executable, "-m", "pip", "install", "lightgbm==3.2.1"])
+from lightgbm import LGBMClassifier
 
 random.seed(0)
 
@@ -21,20 +21,13 @@ random.seed(0)
 
 def p1model():
     # For LGBMClassifier
-    # return LGBMClassifier(
-    #     class_weight="balanced",
-    #     n_estimators=200,
-    #     learning_rate=0.05,
-    #     max_depth=5,
-    #     num_leaves=9,
-    #     random_state=3407
-    # )
-
-    # For LogisticRegression
-    return linear_model.LogisticRegression(
-        C=5.0,
-        max_iter=2000,
-        class_weight="balanced"
+    return LGBMClassifier(
+        class_weight="balanced",
+        n_estimators=100,
+        learning_rate=0.075,
+        max_depth=5,
+        num_leaves=9,
+        random_state=3407
     )
 
 
@@ -154,22 +147,14 @@ def p3model(data):
     X_train = [p3feat(d) for d, _, _ in data]
     y_train = [l for _, _, l in data]
 
-    # For LogisticRegression
-    model = linear_model.LogisticRegression(
-        C=5.0,
-        max_iter=1500,
-        class_weight={0: 1.0, 1: 4.5}
+    model = LGBMClassifier(
+        class_weight={0: 1.0, 1: 4.8},
+        n_estimators=100,
+        learning_rate=0.05,
+        max_depth=5,
+        num_leaves=9,
+        random_state=1024
     )
-
-    # For LGBMClassifier
-    # model = LGBMClassifier(
-    #     class_weight={0: 1.0, 1: 4.5},
-    #     n_estimators=200,
-    #     learning_rate=0.05,
-    #     max_depth=5,
-    #     num_leaves=9,
-    #     random_state=7
-    # )
 
     # You can use any model you want, though it must have a "predict" function which takes a feature vector
     model.fit(X_train, y_train)
@@ -189,7 +174,7 @@ def p3model(data):
 # return: list of predictions (list of bool)
 
 
-def p4labels(test_scores, dTest, zTest, threshold0=0.510, threshold1=0.480):
+def p4labels(test_scores, dTest, zTest, threshold0=0.510, threshold1=0.490):
     predictions = []
     for s, z in zip(test_scores, zTest):
         if not z:
@@ -223,27 +208,17 @@ def p5(dataTrain, dTest, zTest):
     y_train = [l for _, _, l in dataTrain]
     X_test = [p1feat(d, z) for d, z in zip(dTest, zTest)]
 
-    # For LogisticRegression
-    model = p1model()
-
-    # For LGBMClassifier
-    # model = LGBMClassifier(
-    #     class_weight="balanced",
-    #     n_estimators=200,
-    #     learning_rate=0.05,
-    #     max_depth=5,
-    #     num_leaves=9,
-    #     random_state=7
-    # )
-
+    model = LGBMClassifier(
+        class_weight="balanced",
+        n_estimators=200,
+        learning_rate=0.05,
+        max_depth=5,
+        num_leaves=9,
+        random_state=3407
+    )
     model.fit(X_train, y_train)
 
     test_scores = [x[1] for x in model.predict_proba(X_test)]
-
-    # For LogisticRegression
     test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.495)
-
-    # For LGBMClassifier
-    # test_predictions = p4labels(test_scores, dTest, zTest, threshold0=0.510, threshold1=0.490)
 
     return test_predictions

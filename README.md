@@ -9,11 +9,11 @@ The dataset required for each homework can be found in ``291 2025 homework.pdf``
 ### Run Codes
 - Homeworks
 
-You only need to directly run ``hwx_stub.ipynb`` inside each ``HW`` folder.
+​	You only need to directly run ``hwx_stub.ipynb`` inside each ``HW`` folder.
 
 - Assignment1
 
-You only need to modify the code inside the ``submission.py`` file located in the ``Assignment1`` folder. Then run:
+​	You only need to modify the code inside the ``submission.py`` file located in the ``Assignment1`` folder. Then run:
 
 ```bash
 cd Assignment1

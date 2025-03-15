@@ -20,5 +20,9 @@ cd Assignment1
 python autograder.py
 ```
 
+- Assignment2
+
+You only need to directly run ``src.ipynb`` inside the ``Assignment2`` folder.
+
 ### Questions
 You are welcome to discuss any issues you encounter while running this GitHub repository. Feel free to either open an issue or contact me directly at **zhl186@ucsd.edu**.
